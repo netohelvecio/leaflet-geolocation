@@ -1,6 +1,8 @@
 import { MapContainer, Marker, Popup, TileLayer, useMapEvents } from 'react-leaflet'
+import { AlgoliaProvider, SearchControl } from 'leaflet-geosearch';
 import "./app.css"
 import 'leaflet/dist/leaflet.css';
+import 'leaflet-geosearch/dist/geosearch.css';
 import { useEffect, useRef, useState } from 'react';
 
 interface IPosition {
@@ -49,6 +51,8 @@ interface IProps {
   setPosition: (position: IPosition) => void;
 }
 
+
+
 function LocationMarker({ position, setPosition }: IProps) {
   const markerRef = useRef<any>(null)
 
@@ -57,6 +61,28 @@ function LocationMarker({ position, setPosition }: IProps) {
       setPosition(e.latlng)
     },
   })
+  
+  map.on('geosearch/showlocation', (e) => {
+    console.log("e", e.location);
+
+    // @ts-ignore
+    setPosition({ lat: e.location.y, lng: e.location.x })
+  });
+
+  // @ts-ignore
+  useEffect(() => {
+    const searchControl = SearchControl({
+      style: 'bar',
+      showMarker: false,
+      showPopup: false,
+      notFoundMessage: 'Local não encontrado, tente novamente.',
+      provider: new AlgoliaProvider(),
+    });
+
+    map.addControl(searchControl);
+
+    return () => map.removeControl(searchControl);
+  }, []);
 
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
@@ -65,7 +91,7 @@ function LocationMarker({ position, setPosition }: IProps) {
         map.flyTo({ lng: response.coords.longitude, lat: response.coords.latitude  })
       },
       (err) => alert(err.message),
-      { timeout: 15000 }
+      { timeout: 15000, enableHighAccuracy: true }
     )
   }, [navigator.geolocation])
 
